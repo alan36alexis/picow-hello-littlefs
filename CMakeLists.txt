@@ -38,6 +38,7 @@ pico_sdk_init()
 set(LITTLEFS_SOURCES 
     littlefs/lfs.c
     littlefs/lfs_util.c
+    littlefs/lfs_pico_implementation.c
     )
 
 # Add executable. Default name is the project name, version 0.1
