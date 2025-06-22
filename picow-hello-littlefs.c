@@ -1,27 +1,31 @@
 #include <stdio.h>
 #include <string.h>
 #include "pico/stdlib.h"
-#include "hardware/flash.h"
-#include "hardware/sync.h"
-//#include "lfs.h"
+
+#include "lfs.h"
 #include "lfs_pico_implementation.h"
+
+// Definición de la estructura
+typedef struct {
+    uint8_t status;
+    float value1;
+    float value2;
+} data_user_t;
 
 int main() {
     stdio_init_all();
     sleep_ms(2000); // Esperar para estabilizar UART
 
-    lfs_pico_config();
+    // Inicializar LittleFS
+    lfs_pico_init();
+
+    // Instancia de LittleFS
+    lfs_t lfs;
 
     // Montar el sistema de archivos
-    int err = lfs_mount(&lfs, &cfg);
+    int err = lfs_mount_filesystem(&lfs);
     if (err) {
-        printf("Formateando sistema de archivos...\n");
-        lfs_format(&lfs, &cfg);
-        err = lfs_mount(&lfs, &cfg);
-        if (err) {
-            printf("Error al montar LittleFS: %d\n", err);
-            while (true) sleep_ms(1000);
-        }
+        while (true) sleep_ms(1000); // Error fatal
     }
 
     // Nombre del archivo
@@ -43,8 +47,6 @@ int main() {
         printf("No se encontró %s, inicializando: status=%u, value1=%.1f, value2=%.1f\n", filename, data.status, data.value1, data.value2);
     }
 
-    // data.value1 = 0.0;
-    // data.value2 = 1.0;
     // Actualizar datos
     data.value1 += 0.1;
     data.value2 -= 0.1;
@@ -61,7 +63,7 @@ int main() {
     }
 
     // Desmontar el sistema de archivos
-    lfs_unmount(&lfs);
+    lfs_unmount_filesystem(&lfs);
 
     // Bucle infinito
     while (true) {

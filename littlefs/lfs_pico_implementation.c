@@ -1,13 +1,23 @@
 #include "lfs_pico_implementation.h"
+#include "pico/stdlib.h"
+#include "hardware/flash.h"
+#include "hardware/sync.h"
+#include <string.h>
+
+// Estructura para la configuración de LittleFS
+static struct lfs_config cfg;
+
+// Búfer estático para el lookahead de LittleFS
+static uint8_t lookahead_buffer[LOOKAHEAD_SIZE / 8]; // 64 bits = 8 bytes
 
 // Funciones de interfaz con la Flash
-int flash_read(const struct lfs_config *c, lfs_block_t block, lfs_off_t off, void *buffer, lfs_size_t size) {
+static int flash_read(const struct lfs_config *c, lfs_block_t block, lfs_off_t off, void *buffer, lfs_size_t size) {
     uint32_t addr = FLASH_OFFSET + (block * BLOCK_SIZE) + off;
     memcpy(buffer, (const void *)(XIP_BASE + addr), size);
     return LFS_ERR_OK;
 }
 
-int flash_prog(const struct lfs_config *c, lfs_block_t block, lfs_off_t off, const void *buffer, lfs_size_t size) {
+static int flash_prog(const struct lfs_config *c, lfs_block_t block, lfs_off_t off, const void *buffer, lfs_size_t size) {
     uint32_t addr = FLASH_OFFSET + (block * BLOCK_SIZE) + off;
     uint32_t interrupts = save_and_disable_interrupts();
     flash_range_program(addr, buffer, size);
@@ -15,7 +25,7 @@ int flash_prog(const struct lfs_config *c, lfs_block_t block, lfs_off_t off, con
     return LFS_ERR_OK;
 }
 
-int flash_erase(const struct lfs_config *c, lfs_block_t block) {
+static int flash_erase(const struct lfs_config *c, lfs_block_t block) {
     uint32_t addr = FLASH_OFFSET + (block * BLOCK_SIZE);
     uint32_t interrupts = save_and_disable_interrupts();
     flash_range_erase(addr, BLOCK_SIZE);
@@ -23,11 +33,11 @@ int flash_erase(const struct lfs_config *c, lfs_block_t block) {
     return LFS_ERR_OK;
 }
 
-int flash_sync(const struct lfs_config *c) {
+static int flash_sync(const struct lfs_config *c) {
     return LFS_ERR_OK; // No se necesita sincronización adicional
 }
 
-int lfs_pico_config (void) {
+void lfs_pico_init(void) {
     // Configurar LittleFS
     cfg.read = flash_read;
     cfg.prog = flash_prog;
@@ -46,6 +56,22 @@ int lfs_pico_config (void) {
     cfg.name_max = 0; // Usar máximo predeterminado
     cfg.file_max = 0; // Usar máximo predeterminado
     cfg.attr_max = 0; // Usar máximo predeterminado
+}
 
-    return LFS_ERR_OK;
+int lfs_mount_filesystem(lfs_t *lfs) {
+    // Montar el sistema de archivos
+    int err = lfs_mount(lfs, &cfg);
+    if (err) {
+        printf("Formateando sistema de archivos...\n");
+        lfs_format(lfs, &cfg);
+        err = lfs_mount(lfs, &cfg);
+        if (err) {
+            printf("Error al montar LittleFS: %d\n", err);
+        }
+    }
+    return err;
+}
+
+void lfs_unmount_filesystem(lfs_t *lfs) {
+    lfs_unmount(lfs);
 }

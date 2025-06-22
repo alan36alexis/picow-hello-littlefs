@@ -1,8 +1,6 @@
-#include <stdio.h>
-#include <string.h>
-#include "pico/stdlib.h"
-#include "hardware/flash.h"
-#include "hardware/sync.h"
+#ifndef LFS_PICO_IMPLEMENTATION_H
+#define LFS_PICO_IMPLEMENTATION_H
+
 #include "lfs.h"
 
 // Definir el offset y tamaño para el sistema de archivos LittleFS
@@ -18,19 +16,13 @@
 #define BLOCK_COUNT (FLASH_SIZE / BLOCK_SIZE) // 256 KB / 4 KB = 64 bloques
 #define LOOKAHEAD_SIZE 64 // Tamaño del búfer de lookahead (en bits)
 
-// Prototipos
-int lfs_pico_config (void);
+// Inicializar la configuración de LittleFS
+void lfs_pico_init(void);
 
-// Definición de la estructura
-typedef struct {
-    uint8_t status;
-    float value1;
-    float value2;
-} data_user_t;
+// Montar el sistema de archivos
+int lfs_mount_filesystem(lfs_t *lfs);
 
-// Búfer estático para el lookahead de LittleFS
-static uint8_t lookahead_buffer[LOOKAHEAD_SIZE / 8]; // 64 bits = 8 bytes
+// Desmontar el sistema de archivos
+void lfs_unmount_filesystem(lfs_t *lfs);
 
-// Estructura para la configuración de LittleFS
-lfs_t lfs;
-struct lfs_config cfg;
+#endif // LFS_PICO_IMPLEMENTATION_H
